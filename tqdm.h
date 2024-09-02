@@ -14,15 +14,16 @@
 
 class tqdm {
     private:
+        using ULL = unsigned long long;
         // time, iteration counters and deques for rate calculations
         std::chrono::time_point<std::chrono::system_clock> t_first = std::chrono::system_clock::now();
         std::chrono::time_point<std::chrono::system_clock> t_old = std::chrono::system_clock::now();
-        int n_old = 0;
+        ULL n_old = 0;
         std::vector<double> deq_t;
-        std::vector<int> deq_n;
-        int nupdates = 0;
-        int total_ = 0;
-        int period = 1;
+        std::vector<ULL> deq_n;
+        ULL nupdates = 0;
+        ULL total_ = 0;
+        ULL period = 1;
         unsigned int smoothing = 50;
         bool use_ema = true;
         float alpha_ema = 0.1;
@@ -102,14 +103,14 @@ class tqdm {
             printf("\n");
             fflush(stdout);
         }
-        void progress(int curr, int tot) {
+        void progress(ULL curr, ULL tot) {
             if(is_tty && (curr%period == 0)) {
                 total_ = tot;
                 nupdates++;
                 auto now = std::chrono::system_clock::now();
                 double dt = ((std::chrono::duration<double>)(now - t_old)).count();
                 double dt_tot = ((std::chrono::duration<double>)(now - t_first)).count();
-                int dn = curr - n_old;
+                ULL dn = curr - n_old;
                 n_old = curr;
                 t_old = now;
                 if (deq_n.size() >= smoothing) deq_n.erase(deq_n.begin());
@@ -126,14 +127,14 @@ class tqdm {
                     }
                 } else {
                     double dtsum = std::accumulate(deq_t.begin(),deq_t.end(),0.);
-                    int dnsum = std::accumulate(deq_n.begin(),deq_n.end(),0.);
+                    double dnsum = std::accumulate(deq_n.begin(),deq_n.end(),0.);
                     avgrate = dnsum/dtsum;
                 }
 
                 // learn an appropriate period length to avoid spamming stdout
                 // and slowing down the loop, shoot for ~25Hz and smooth over 3 seconds
                 if (nupdates > 10) {
-                    period = (int)( std::min(std::max((1.0/25)*curr/dt_tot,1.0), 5e5));
+                    period = (ULL)( std::min(std::max((1.0/25)*curr/dt_tot,1.0), 5e5));
                     smoothing = 25*3;
                 }
                 double peta = (tot-curr)/avgrate;
@@ -174,7 +175,7 @@ class tqdm {
                 } else if (avgrate > 1e3) {
                     unit = "kHz"; div = 1.0e3;
                 }
-                printf("[%4d/%4d | %3.1f %s | %.0fs<%.0fs] ", curr,tot,  avgrate/div, unit.c_str(), dt_tot, peta);
+                printf("[%4llu/%4llu | %3.1f %s | %.0fs<%.0fs] ", curr, tot, avgrate/div, unit.c_str(), dt_tot, peta);
                 printf("%s ", label.c_str());
                 if (use_colors) printf("\033[0m\033[32m\033[0m\015 ");
 
